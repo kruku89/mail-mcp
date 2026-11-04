@@ -143,9 +143,9 @@ def send_email(to_address: str, subject: str, body: str) -> str:
 
 if __name__ == "__main__":
     if "PORT" in os.environ:
-        # Wymuszenie nasłuchiwania na publicznym IP w kontenerze Railway
-        os.environ["FASTMCP_HOST"] = "0.0.0.0"
-        os.environ["FASTMCP_PORT"] = os.environ["PORT"]
+        # Przypisanie hosta i portu bezpośrednio do ustawień obiektu mcp
+        mcp.settings.host = "0.0.0.0"
+        mcp.settings.port = int(os.environ["PORT"])
         mcp.run(transport="sse")
     else:
         # Tryb lokalny stdio dla Claude

@@ -11,6 +11,8 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Route
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 
 # Ładowanie .env z lokalnej ścieżki
@@ -148,7 +150,6 @@ def send_email(to_address: str, subject: str, body: str) -> str:
 
 if __name__ == "__main__":
     if "PORT" in os.environ:
-        # Tryb chmurowy Railway – konfiguracja Starlette z względnymi ścieżkami SSE
         port = int(os.environ["PORT"])
         sse = SseServerTransport("/messages/")
 
@@ -167,14 +168,19 @@ if __name__ == "__main__":
                 request.scope, request.receive, request._send
             )
 
+        middleware = [
+            Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+        ]
+
         starlette_app = Starlette(
             debug=True,
             routes=[
+                Route("/", endpoint=handle_sse),
                 Route("/sse", endpoint=handle_sse),
                 Route("/messages/", endpoint=handle_messages, methods=["POST"]),
             ],
+            middleware=middleware,
         )
         uvicorn.run(starlette_app, host="0.0.0.0", port=port)
     else:
-        # Tryb lokalny stdio dla Claude Desktop
         mcp.run()

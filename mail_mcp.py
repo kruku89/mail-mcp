@@ -6,6 +6,12 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import decode_header
 from dotenv import load_dotenv
+
+# 1. Wymuszenie publicznego interfejsu PRZED utworzeniem serwera FastMCP
+if "PORT" in os.environ:
+    os.environ["FASTMCP_HOST"] = "0.0.0.0"
+    os.environ["FASTMCP_PORT"] = os.environ["PORT"]
+
 from mcp.server.fastmcp import FastMCP
 
 # Ładowanie .env z lokalnej ścieżki
@@ -143,10 +149,6 @@ def send_email(to_address: str, subject: str, body: str) -> str:
 
 if __name__ == "__main__":
     if "PORT" in os.environ:
-        # Przypisanie hosta i portu bezpośrednio do ustawień obiektu mcp
-        mcp.settings.host = "0.0.0.0"
-        mcp.settings.port = int(os.environ["PORT"])
         mcp.run(transport="sse")
     else:
-        # Tryb lokalny stdio dla Claude
         mcp.run()

@@ -143,10 +143,10 @@ def send_email(to_address: str, subject: str, body: str) -> str:
 
 if __name__ == "__main__":
     if "PORT" in os.environ:
-        # Konfiguracja dla Railway
-        mcp.settings.host = "0.0.0.0"
-        mcp.settings.port = int(os.environ["PORT"])
+        # Wymuszenie nasłuchiwania na publicznym IP w kontenerze Railway
+        os.environ["FASTMCP_HOST"] = "0.0.0.0"
+        os.environ["FASTMCP_PORT"] = os.environ["PORT"]
         mcp.run(transport="sse")
     else:
-        # Konfiguracja dla Claude (stdio)
+        # Tryb lokalny stdio dla Claude
         mcp.run()

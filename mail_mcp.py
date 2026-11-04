@@ -7,12 +7,11 @@ from email.mime.multipart import MIMEMultipart
 from email.header import decode_header
 from dotenv import load_dotenv
 
-# 1. Wymuszenie publicznego interfejsu PRZED utworzeniem serwera FastMCP
-if "PORT" in os.environ:
-    os.environ["FASTMCP_HOST"] = "0.0.0.0"
-    os.environ["FASTMCP_PORT"] = os.environ["PORT"]
-
 from mcp.server.fastmcp import FastMCP
+from mcp.server.sse import SseServerTransport
+from starlette.applications import Starlette
+from starlette.routing import Route
+import uvicorn
 
 # Ładowanie .env z lokalnej ścieżki
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -149,6 +148,33 @@ def send_email(to_address: str, subject: str, body: str) -> str:
 
 if __name__ == "__main__":
     if "PORT" in os.environ:
-        mcp.run(transport="sse")
+        # Tryb chmurowy Railway – konfiguracja Starlette z względnymi ścieżkami SSE
+        port = int(os.environ["PORT"])
+        sse = SseServerTransport("/messages/")
+
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                await mcp._mcp_server.run(
+                    streams[0],
+                    streams[1],
+                    mcp._mcp_server.create_initialization_options(),
+                )
+
+        async def handle_messages(request):
+            await sse.handle_post_message(
+                request.scope, request.receive, request._send
+            )
+
+        starlette_app = Starlette(
+            debug=True,
+            routes=[
+                Route("/sse", endpoint=handle_sse),
+                Route("/messages/", endpoint=handle_messages, methods=["POST"]),
+            ],
+        )
+        uvicorn.run(starlette_app, host="0.0.0.0", port=port)
     else:
+        # Tryb lokalny stdio dla Claude Desktop
         mcp.run()

@@ -1,5 +1,5 @@
-mcp<2
-python-dotenv
+fastapi
 uvicorn
+python-dotenv
+mcp<2
 starlette
-

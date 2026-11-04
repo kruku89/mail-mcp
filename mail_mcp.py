@@ -8,14 +8,8 @@ from email.header import decode_header
 from dotenv import load_dotenv
 
 from mcp.server.fastmcp import FastMCP
-from mcp.server.sse import SseServerTransport
-from starlette.applications import Starlette
-from starlette.routing import Route
-from starlette.middleware import Middleware
-from starlette.middleware.cors import CORSMiddleware
-import uvicorn
 
-# Ładowanie .env z lokalnej ścieżki
+# Ładowanie .env z lokalnej ścieżki (dla uruchomień lokalnych na Macu)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(script_dir, ".env"))
 
@@ -150,37 +144,11 @@ def send_email(to_address: str, subject: str, body: str) -> str:
 
 if __name__ == "__main__":
     if "PORT" in os.environ:
-        port = int(os.environ["PORT"])
-        sse = SseServerTransport("/messages/")
-
-        async def handle_sse(request):
-            async with sse.connect_sse(
-                request.scope, request.receive, request._send
-            ) as streams:
-                await mcp._mcp_server.run(
-                    streams[0],
-                    streams[1],
-                    mcp._mcp_server.create_initialization_options(),
-                )
-
-        async def handle_messages(request):
-            await sse.handle_post_message(
-                request.scope, request.receive, request._send
-            )
-
-        middleware = [
-            Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-        ]
-
-        starlette_app = Starlette(
-            debug=True,
-            routes=[
-                Route("/", endpoint=handle_sse),
-                Route("/sse", endpoint=handle_sse),
-                Route("/messages/", endpoint=handle_messages, methods=["POST"]),
-            ],
-            middleware=middleware,
-        )
-        uvicorn.run(starlette_app, host="0.0.0.0", port=port)
+        # Obsługa protokołu HTTPS i nagłówków proxy na Railway
+        os.environ["FORWARDED_ALLOW_IPS"] = "*"
+        mcp.settings.host = "0.0.0.0"
+        mcp.settings.port = int(os.environ["PORT"])
+        mcp.run(transport="sse")
     else:
+        # Obsługa lokalna stdio w Claude Desktop
         mcp.run()
